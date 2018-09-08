@@ -1,6 +1,6 @@
 Debug/
 *.atsln
-*.component
+*.componentinfo.*
 *.cppproj
-_vm/
+__vm/
 .vs/
