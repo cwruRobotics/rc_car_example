@@ -1,45 +1,71 @@
-#define PIN 	7
-#define LAG 	10
+#define PIN 			7
+#define LAG 			10
+#define TRIG 			8
+#define ECHO 			9
+#define TOO_CLOSE 		50
+#define EPSILON 		5
+#define INTERVAL 		100
 
-// enum COMMANDS = {
-// 	FORWARD 		= 10,
-// 	TURBO 			= 22,
-// 	FORWARD_LEFT 	= 28,
-// 	FORWARD_RIGHT 	= 34,
-// 	BACKWARD 		= 40,
-// 	BACK_LEFT 		= 52,
-// 	BACK_RIGHT 		= 46
-// };
+#define S2 				10
+#define S3 				11
+#define FREQ 			12
 
+
+enum COMMANDS {
+	NONE 			= 4,
+	FORWARD 		= 10,
+	TURBO 			= 22,
+	FORWARD_LEFT 	= 28,
+	FORWARD_RIGHT 	= 34,
+	BACKWARD 		= 40,
+	BACK_LEFT 		= 52,
+	BACK_RIGHT 		= 46
+};
+
+uint16_t dist = 0;
+int16_t error = 0;
+uint8_t command = NONE;
+
+uint16_t poll_ultrasonic(uint8_t);
+uint16_t poll_green();
 void send_start_cmd(void);
 void send_cmd(uint8_t);
 void send_end_cmd(void);
+long time = 0;
 
 void setup(){
-
+	Serial.begin(115200);
 }
 
 void loop(){
-	for(uint8_t i = 0; i< 100; i++){
-		send_cmd(10); 	// drive forward
-		send_end_cmd();
+	dist = poll_ultrasonic(TRIG, ECHO);
+	error = dist - TOO_CLOSE;
+
+
+	if(abs(error) > EPSILON){
+		
+		if(error > 0){
+			command = FORWARD;
+		}else{
+			command = BACKWARD;
+		}
+
 	}
-	
-	for(uint8_t i = 0; i< 100; i++){
-		send_end_cmd();
+	else{
+		command = NONE;
 	}
 
-	for(uint8_t i = 0; i< 100; i++){
-		send_cmd(10); 	// drive forward
-		send_end_cmd();
-		send_end_cmd();
-	}
-	
-	for(uint8_t i = 0; i< 100; i++){
-		send_end_cmd();
+	if( (millis() - time) >  INTERVAL){
+		send_cmd(command);
+		delay(10);
+		send_cmd(command);
+		time = millis();
 	}
 	
 }
+
+
+/////////////////////////////////////////////////////
 
 void send_end_cmd(){
 	send_cmd(4);
@@ -77,4 +103,21 @@ void send_cmd(uint8_t num){
 		digitalWrite(PIN, LOW);
 		delayMicroseconds(500 - LAG);
 	}
+}
+
+uint16_t poll_ultrasonic(uint8_t trig, uint8_t echo){
+	digitalWrite(trig, LOW);
+	delayMicroseconds(2);
+	digitalWrite(trig, HIGH);
+	delayMicroseconds(10);
+	digitalWrite(trig, LOW);
+
+	unsigned long temp = pulseIn(echo, HIGH, 100000);
+	return (uint16_t)(temp / 58);
+}
+
+uint16_t poll_green(){
+	digitalWrite(S2, HIGH);
+	digitalWrite(S3, HIGH);
+	return pulseIn(FREQ, HIGH, 200);
 }
